@@ -313,6 +313,8 @@
     display: flex;
     gap: .5rem;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   .filter-input {
     background: var(--bg-primary);
@@ -958,6 +960,17 @@ function renderOverview() {
             <option value="true">Enabled</option>
             <option value="false">Disabled</option>
           </select>
+          <select class="filter-select" id="overviewFilterProfile">
+            <option value="">All Profiles</option>
+            <option value="Domain">Domain</option>
+            <option value="Private">Private</option>
+            <option value="Public">Public</option>
+          </select>
+          <select class="filter-select" id="overviewFilterSecurity">
+            <option value="">All Security</option>
+            <option value="auth">Require Auth</option>
+            <option value="none">No Auth Required</option>
+          </select>
         </div>
       </div>
       <div class="rules-table-scroll">
@@ -970,6 +983,7 @@ function renderOverview() {
               <th>Local Port</th>
               <th>Remote Scope</th>
               <th>Enabled</th>
+              <th>Security</th>
               <th>Service</th>
             </tr>
           </thead>
@@ -984,19 +998,29 @@ function renderOverview() {
   document.getElementById('overviewSearch').addEventListener('input', renderOverviewTable);
   document.getElementById('overviewFilterAction').addEventListener('change', renderOverviewTable);
   document.getElementById('overviewFilterEnabled').addEventListener('change', renderOverviewTable);
+  document.getElementById('overviewFilterProfile').addEventListener('change', renderOverviewTable);
+  document.getElementById('overviewFilterSecurity').addEventListener('change', renderOverviewTable);
 }
 
 function renderOverviewTable() {
   const search = (document.getElementById('overviewSearch')?.value || '').toLowerCase();
   const actionFilter = document.getElementById('overviewFilterAction')?.value || '';
   const enabledFilter = document.getElementById('overviewFilterEnabled')?.value || '';
+  const profileFilter = document.getElementById('overviewFilterProfile')?.value || '';
+  const securityFilter = document.getElementById('overviewFilterSecurity')?.value || '';
 
   let filtered = rules.filter(r => {
     if (actionFilter && r.action !== actionFilter) return false;
     if (enabledFilter === 'true' && !r.enabled) return false;
     if (enabledFilter === 'false' && r.enabled) return false;
+    if (profileFilter) {
+      const p = (r.profile || '').toLowerCase();
+      if (p !== 'all' && !p.includes(profileFilter.toLowerCase())) return false;
+    }
+    if (securityFilter === 'auth' && !r.security) return false;
+    if (securityFilter === 'none' && r.security) return false;
     if (search) {
-      const haystack = `${r.name} ${r.protocol} ${protoLabel(r.protocol)} ${r.localPort} ${portShortName(r.localPort)} ${r.remoteScope} ${r.service} ${r.action}`.toLowerCase();
+      const haystack = `${r.name} ${r.protocol} ${protoLabel(r.protocol)} ${r.localPort} ${portShortName(r.localPort)} ${r.remoteScope} ${r.service} ${r.action} ${r.security}`.toLowerCase();
       if (!haystack.includes(search)) return false;
     }
     return true;
@@ -1011,6 +1035,7 @@ function renderOverviewTable() {
       <td>${portLabel(r.localPort)}</td>
       <td title="${r.remoteScope}">${r.remoteScope || 'Any'}</td>
       <td><span class="panel-badge ${r.enabled ? 'badge-enabled' : 'badge-disabled'}">${r.enabled ? 'Yes' : 'No'}</span></td>
+      <td>${r.security ? '<span class="panel-badge badge-enabled" style="font-size:.65rem;">Auth</span>' : '<span style="color:var(--text-muted)">—</span>'}</td>
       <td>${r.service || '—'}</td>
     </tr>
   `).join('');
@@ -1043,12 +1068,56 @@ function renderEnvironment(tabId, profileKey, envName, networkType, accentColor)
   };
   const scene = scenes[tabId];
 
+  // Compute stats for this profile
+  const totalEnv = envRules.length;
+  const enabledEnv = envRules.filter(r => r.enabled).length;
+  const disabledEnv = totalEnv - enabledEnv;
+  const allowAll = envRules.filter(r => r.action === 'Allow').length;
+  const blockAll = envRules.filter(r => r.action === 'Block').length;
+  const tcpEnv = enabledRules.filter(r => r.protocol === '6').length;
+  const icmpEnv = enabledRules.filter(r => r.protocol === '1' || r.protocol === '58').length;
+  const withPortsEnv = enabledRules.filter(r => r.localPort && r.localPort !== 'Any').length;
+  const authEnv = enabledRules.filter(r => r.security).length;
+
   container.innerHTML = `
     <div class="env-scene">
       <div class="env-header">
         <h2>${envName}</h2>
         <div class="env-subtitle">Firewall profile: <strong>${networkType}</strong></div>
         <div class="env-profile-badge ${scene.profileClass}" style="margin-top:.5rem;">${profileKey} Profile Active</div>
+      </div>
+
+      <div class="overview-grid" style="width:100%;">
+        <div class="stat-card">
+          <div class="stat-label">Total Rules</div>
+          <div class="stat-value color-blue">${totalEnv}</div>
+          <div class="stat-sub">${enabledEnv} enabled / ${disabledEnv} disabled</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Allow Rules</div>
+          <div class="stat-value color-green">${allowAll}</div>
+          <div class="stat-sub">${allowRules.length} active</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Block Rules</div>
+          <div class="stat-value color-red">${blockAll}</div>
+          <div class="stat-sub">${blockRules.length} active</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">TCP Rules</div>
+          <div class="stat-value color-purple">${tcpEnv}</div>
+          <div class="stat-sub">${withPortsEnv} with specific ports</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">ICMP / ICMPv6</div>
+          <div class="stat-value color-cyan">${icmpEnv}</div>
+          <div class="stat-sub">${enabledRules.filter(r=>r.protocol==='1').length} v4 / ${enabledRules.filter(r=>r.protocol==='58').length} v6</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Require Auth</div>
+          <div class="stat-value color-orange">${authEnv}</div>
+          <div class="stat-sub">${enabledRules.length - authEnv} no auth required</div>
+        </div>
       </div>
 
       <div class="env-bg ${scene.bg}">
