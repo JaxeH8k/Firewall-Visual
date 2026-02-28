@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firewall GPO Visualizer</title>
+<style>
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #111827;
+    --bg-card: #1a2234;
+    --bg-card-hover: #1e2a40;
+    --border: #2d3a52;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-blue: #3b82f6;
+    --accent-green: #22c55e;
+    --accent-red: #ef4444;
+    --accent-orange: #f59e0b;
+    --accent-purple: #a855f7;
+    --accent-cyan: #06b6d4;
+    --glow-blue: rgba(59, 130, 246, 0.15);
+    --glow-green: rgba(34, 197, 94, 0.15);
+    --glow-red: rgba(239, 68, 68, 0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Landing / Upload screen ── */
+  #landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    animation: fadeIn .6s ease;
+    padding: 2rem;
+  }
+  #landing h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    margin-bottom: .5rem;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #landing p { color: var(--text-secondary); margin-bottom: 2rem; font-size: 1.1rem; }
+  .upload-zone {
+    width: 480px; max-width: 90vw;
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    transition: all .3s;
+    cursor: pointer;
+    background: var(--bg-secondary);
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent-blue);
+    background: var(--glow-blue);
+  }
+  .upload-zone svg { margin-bottom: 1rem; }
+  .upload-zone .label { color: var(--text-secondary); font-size: .95rem; }
+  .upload-zone .sublabel { color: var(--text-muted); font-size: .8rem; margin-top: .5rem; }
+  #fileInput { display: none; }
+
+  .loading-bar {
+    width: 300px; height: 4px;
+    background: var(--bg-card);
+    border-radius: 2px;
+    margin-top: 2rem;
+    overflow: hidden;
+    display: none;
+  }
+  .loading-bar.active { display: block; }
+  .loading-bar-inner {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+    border-radius: 2px;
+    transition: width .3s;
+  }
+
+  /* ── Main app ── */
+  #app { display: none; }
+  #app.visible { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .75rem 1.5rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar .logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    white-space: nowrap;
+  }
+  .topbar .gpo-name {
+    color: var(--text-secondary);
+    font-size: .85rem;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar .reload-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: .4rem .8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .8rem;
+    transition: all .2s;
+  }
+  .topbar .reload-btn:hover { border-color: var(--accent-blue); color: var(--text-primary); }
+
+  /* Nav tabs */
+  .tab-nav {
+    display: flex;
+    gap: 0;
+    padding: 0 1.5rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    padding: .7rem 1.25rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: .85rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .25s;
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text-secondary); }
+  .tab-btn.active {
+    color: var(--accent-blue);
+    border-bottom-color: var(--accent-blue);
+  }
+  .tab-btn .tab-icon { font-size: 1.1rem; }
+
+  /* Content area */
+  .content-wrapper {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    transition: margin-right .3s;
+  }
+  .main-content.panel-open { margin-right: 0; }
+
+  /* ── Side Panel ── */
+  .side-panel {
+    width: 380px;
+    min-width: 380px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform .3s ease;
+    position: relative;
+  }
+  .side-panel.open { transform: translateX(0); }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: var(--bg-secondary);
+    z-index: 5;
+  }
+  .panel-header h3 { font-size: .95rem; font-weight: 600; }
+  .panel-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: .25rem;
+    line-height: 1;
+    transition: color .2s;
+  }
+  .panel-close:hover { color: var(--text-primary); }
+  .panel-body { padding: 1.25rem; }
+  .panel-section { margin-bottom: 1.25rem; }
+  .panel-section-title {
+    font-size: .7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-muted);
+    margin-bottom: .5rem;
+  }
+  .panel-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: .35rem 0;
+    font-size: .85rem;
+  }
+  .panel-row .label { color: var(--text-secondary); }
+  .panel-row .value { color: var(--text-primary); font-weight: 500; text-align: right; max-width: 55%; word-break: break-all; }
+  .panel-badge {
+    display: inline-block;
+    padding: .15rem .6rem;
+    border-radius: 9999px;
+    font-size: .75rem;
+    font-weight: 600;
+  }
+  .badge-allow { background: rgba(34,197,94,.15); color: var(--accent-green); }
+  .badge-block { background: rgba(239,68,68,.15); color: var(--accent-red); }
+  .badge-enabled { background: rgba(59,130,246,.15); color: var(--accent-blue); }
+  .badge-disabled { background: rgba(100,116,139,.2); color: var(--text-muted); }
+  .badge-profile {
+    display: inline-block;
+    padding: .1rem .5rem;
+    border-radius: 4px;
+    font-size: .7rem;
+    font-weight: 600;
+    margin-right: .25rem;
+  }
+  .badge-domain { background: rgba(59,130,246,.15); color: var(--accent-blue); }
+  .badge-private { background: rgba(34,197,94,.15); color: var(--accent-green); }
+  .badge-public { background: rgba(249,115,22,.15); color: var(--accent-orange); }
+
+  /* ── Overview tab ── */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: all .25s;
+    animation: slideUp .5s ease backwards;
+  }
+  .stat-card:nth-child(1) { animation-delay: .05s; }
+  .stat-card:nth-child(2) { animation-delay: .1s; }
+  .stat-card:nth-child(3) { animation-delay: .15s; }
+  .stat-card:nth-child(4) { animation-delay: .2s; }
+  .stat-card:nth-child(5) { animation-delay: .25s; }
+  .stat-card:nth-child(6) { animation-delay: .3s; }
+  .stat-card:hover { border-color: var(--accent-blue); background: var(--bg-card-hover); }
+  .stat-card .stat-label {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    margin-bottom: .35rem;
+  }
+  .stat-card .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+  .stat-card .stat-sub { font-size: .78rem; color: var(--text-secondary); margin-top: .15rem; }
+  .color-green { color: var(--accent-green); }
+  .color-red { color: var(--accent-red); }
+  .color-blue { color: var(--accent-blue); }
+  .color-orange { color: var(--accent-orange); }
+  .color-purple { color: var(--accent-purple); }
+  .color-cyan { color: var(--accent-cyan); }
+
+  /* ── Rules table ── */
+  .rules-table-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: slideUp .5s ease .2s backwards;
+  }
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-header h2 { font-size: 1rem; font-weight: 600; }
+  .table-filter {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+  }
+  .filter-input {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: .4rem .75rem;
+    border-radius: 8px;
+    font-size: .8rem;
+    outline: none;
+    width: 200px;
+    transition: border-color .2s;
+  }
+  .filter-input:focus { border-color: var(--accent-blue); }
+  .filter-select {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: .4rem .6rem;
+    border-radius: 8px;
+    font-size: .8rem;
+    outline: none;
+    cursor: pointer;
+  }
+  .rules-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .rules-table thead th {
+    text-align: left;
+    padding: .6rem 1rem;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+    position: sticky;
+    top: 0;
+  }
+  .rules-table tbody tr {
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .rules-table tbody tr:hover { background: var(--bg-card-hover); }
+  .rules-table tbody tr.selected { background: var(--glow-blue); }
+  .rules-table tbody td {
+    padding: .55rem 1rem;
+    font-size: .82rem;
+    border-bottom: 1px solid rgba(45,58,82,.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+  .rules-table-scroll {
+    max-height: 520px;
+    overflow-y: auto;
+  }
+
+  /* ── Environment tabs ── */
+  .env-scene {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2rem;
+    padding: 1rem 0 2rem;
+    animation: fadeIn .5s ease;
+  }
+  .env-header {
+    text-align: center;
+    animation: slideUp .5s ease;
+    align-self: center;
+  }
+  .env-header h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: .25rem; }
+  .env-header .env-subtitle { color: var(--text-secondary); font-size: .9rem; }
+  .env-header .env-profile-badge {
+    display: inline-block;
+    padding: .25rem .85rem;
+    border-radius: 9999px;
+    font-size: .8rem;
+    font-weight: 600;
+    margin-top: .5rem;
+  }
+
+  /* Computer visual */
+  .computer-scene {
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    width: 100%;
+    max-width: 1100px;
+    animation: slideUp .5s ease .1s backwards;
+  }
+  .scene-illustration {
+    flex-shrink: 0;
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  .computer-svg-wrap {
+    position: relative;
+  }
+  .shield-glow {
+    position: absolute;
+    top: -20px; left: 50%;
+    transform: translateX(-50%);
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    animation: pulse 2.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: .3; transform: translateX(-50%) scale(1); }
+    50% { opacity: .6; transform: translateX(-50%) scale(1.15); }
+  }
+
+  .env-stats-mini {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .env-mini-stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .6rem .9rem;
+    text-align: center;
+    min-width: 80px;
+  }
+  .env-mini-stat .num { font-size: 1.2rem; font-weight: 700; }
+  .env-mini-stat .lbl { font-size: .65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+
+  /* Port grid */
+  .port-grid-area {
+    flex: 1;
+    min-width: 0;
+  }
+  .port-grid-title {
+    font-size: .85rem;
+    font-weight: 600;
+    margin-bottom: .75rem;
+    color: var(--text-secondary);
+  }
+  .port-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: .5rem;
+  }
+  .port-tile {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .6rem .75rem;
+    cursor: pointer;
+    transition: all .25s;
+    animation: fadeIn .4s ease backwards;
+    position: relative;
+    overflow: hidden;
+  }
+  .port-tile::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    border-radius: 3px 0 0 3px;
+  }
+  .port-tile.allow::before { background: var(--accent-green); }
+  .port-tile.block::before { background: var(--accent-red); }
+  .port-tile:hover { border-color: var(--accent-blue); transform: translateY(-1px); }
+  .port-tile.selected { border-color: var(--accent-blue); background: var(--glow-blue); }
+  .port-tile .port-num { font-size: .95rem; font-weight: 700; }
+  .port-tile .port-proto { font-size: .65rem; color: var(--text-muted); text-transform: uppercase; }
+  .port-tile .port-action { font-size: .65rem; font-weight: 600; margin-top: .15rem; }
+  .port-tile .port-action.allow-text { color: var(--accent-green); }
+  .port-tile .port-action.block-text { color: var(--accent-red); }
+  .port-tile .port-name {
+    font-size: .65rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: .1rem;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Animations */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Tab content */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn .35s ease; }
+
+  /* Environment background scenes */
+  .env-bg {
+    position: relative;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    width: 100%;
+  }
+  .env-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    opacity: .08;
+    z-index: 0;
+  }
+  .env-bg > * { position: relative; z-index: 1; }
+  .env-bg.corporate::before { background: linear-gradient(135deg, #1e3a5f, #2a5298); opacity: .12; }
+  .env-bg.coffeeshop::before { background: linear-gradient(135deg, #5a3e1b, #8b6914); opacity: .12; }
+  .env-bg.home::before { background: linear-gradient(135deg, #1a4731, #166534); opacity: .12; }
+  .env-bg { border: 1px solid var(--border); }
+
+  /* Network lines animation */
+  .network-lines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+    border-radius: 16px;
+  }
+  .net-line {
+    position: absolute;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+    opacity: .15;
+    animation: netFlow 3s linear infinite;
+  }
+  @keyframes netFlow {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .computer-scene { flex-direction: column; align-items: center; }
+    .scene-illustration { width: 200px; }
+    .side-panel { width: 100%; min-width: unset; position: fixed; right: 0; top: 0; bottom: 0; z-index: 200; }
+    .port-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  }
+
+  .no-rules-msg {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+    font-size: .9rem;
+  }
+
+  /* Data flow lines for computer visual */
+  .data-flow-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .data-packet {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    animation: packetFlow 2s linear infinite;
+  }
+  @keyframes packetFlow {
+    0% { opacity: 0; transform: translateY(-20px); }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(60px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Landing Screen ── -->
+<div id="landing">
+  <h1>Firewall GPO Visualizer</h1>
+  <p>Load a Windows Firewall Group Policy report to visualize inbound rules</p>
+  <div class="upload-zone" id="uploadZone">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="12" y1="18" x2="12" y2="12"></line>
+      <polyline points="9 15 12 12 15 15"></polyline>
+    </svg>
+    <div class="label">Drop your GPO .htm report here or click to browse</div>
+    <div class="sublabel">Supports GPMC-exported HTML firewall policy reports (UTF-16 or UTF-8)</div>
+  </div>
+  <div class="loading-bar" id="loadingBar">
+    <div class="loading-bar-inner" id="loadingBarInner"></div>
+  </div>
+  <input type="file" id="fileInput" accept=".htm,.html">
+</div>
+
+<!-- ── Main Application ── -->
+<div id="app">
+  <div class="topbar">
+    <div class="logo">FW Visualizer</div>
+    <div class="gpo-name" id="gpoNameDisplay"></div>
+    <button class="reload-btn" id="reloadBtn">Load New File</button>
+  </div>
+  <div class="tab-nav" id="tabNav">
+    <button class="tab-btn active" data-tab="overview">
+      <span class="tab-icon">&#9632;</span> Overview
+    </button>
+    <button class="tab-btn" data-tab="corporate">
+      <span class="tab-icon">&#127970;</span> Corporate Office
+    </button>
+    <button class="tab-btn" data-tab="coffeeshop">
+      <span class="tab-icon">&#9749;</span> Coffee Shop
+    </button>
+    <button class="tab-btn" data-tab="home">
+      <span class="tab-icon">&#127968;</span> Home Network
+    </button>
+  </div>
+
+  <div class="content-wrapper">
+    <div class="main-content" id="mainContent">
+
+      <!-- Overview Tab -->
+      <div class="tab-content active" id="tab-overview"></div>
+
+      <!-- Corporate Tab -->
+      <div class="tab-content" id="tab-corporate"></div>
+
+      <!-- Coffee Shop Tab -->
+      <div class="tab-content" id="tab-coffeeshop"></div>
+
+      <!-- Home Tab -->
+      <div class="tab-content" id="tab-home"></div>
+    </div>
+
+    <!-- Side Panel -->
+    <div class="side-panel" id="sidePanel">
+      <div class="panel-header">
+        <h3 id="panelTitle">Rule Details</h3>
+        <button class="panel-close" id="panelClose">&times;</button>
+      </div>
+      <div class="panel-body" id="panelBody"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let rules = [];
+let gpoName = '';
+let selectedRule = null;
+
+// ── Protocol map ──
+const PROTO_MAP = {
+  '1': 'ICMP', '6': 'TCP', '17': 'UDP', '47': 'GRE',
+  '58': 'ICMPv6', '41': 'IPv6', '43': 'IPv6-Route',
+  '44': 'IPv6-Frag', '59': 'IPv6-NoNxt', '60': 'IPv6-Opts',
+  'Any': 'Any'
+};
+
+// Well-known ports
+const PORT_NAMES = {
+  '20': 'FTP Data', '21': 'FTP', '22': 'SSH', '23': 'Telnet',
+  '25': 'SMTP', '53': 'DNS', '67': 'DHCP Server', '68': 'DHCP Client',
+  '80': 'HTTP', '110': 'POP3', '119': 'NNTP', '123': 'NTP',
+  '135': 'RPC', '137': 'NetBIOS Name', '138': 'NetBIOS Datagram',
+  '139': 'NetBIOS Session', '143': 'IMAP', '161': 'SNMP',
+  '162': 'SNMP Trap', '389': 'LDAP', '443': 'HTTPS', '445': 'SMB',
+  '464': 'Kerberos', '500': 'IKE', '514': 'Syslog', '515': 'LPD',
+  '587': 'SMTP/TLS', '636': 'LDAPS', '993': 'IMAPS', '995': 'POP3S',
+  '1433': 'MSSQL', '1434': 'MSSQL Browser', '1521': 'Oracle',
+  '3306': 'MySQL', '3389': 'RDP', '5432': 'PostgreSQL',
+  '5985': 'WinRM HTTP', '5986': 'WinRM HTTPS',
+  '8080': 'HTTP Alt', '8443': 'HTTPS Alt', '9000': 'PHP-FPM',
+};
+
+// ── File handling ──
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const loadingBar = document.getElementById('loadingBar');
+const loadingBarInner = document.getElementById('loadingBarInner');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) processFile(fileInput.files[0]); });
+document.getElementById('reloadBtn').addEventListener('click', () => {
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('landing').style.display = '';
+  fileInput.value = '';
+  rules = [];
+  selectedRule = null;
+  closeSidePanel();
+});
+
+function processFile(file) {
+  loadingBar.classList.add('active');
+  loadingBarInner.style.width = '30%';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    loadingBarInner.style.width = '60%';
+    let text = e.target.result;
+    // If we see null bytes, it's likely UTF-16 — re-read
+    if (text.includes('\u0000')) {
+      const reader2 = new FileReader();
+      reader2.onload = e2 => {
+        parseAndRender(e2.target.result);
+      };
+      reader2.readAsText(file, 'UTF-16');
+    } else {
+      parseAndRender(text);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseAndRender(html) {
+  loadingBarInner.style.width = '80%';
+  rules = parseGPOHtml(html);
+  loadingBarInner.style.width = '100%';
+  setTimeout(() => {
+    document.getElementById('landing').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    loadingBar.classList.remove('active');
+    loadingBarInner.style.width = '0%';
+    renderAll();
+  }, 350);
+}
+
+// ── Parser ──
+function parseGPOHtml(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // Extract GPO name from title or heading
+  const titleEl = doc.querySelector('title');
+  gpoName = titleEl ? titleEl.textContent.trim() : 'Unknown GPO';
+  const gpoNameRow = doc.querySelector('.gponame');
+  if (gpoNameRow) gpoName = gpoNameRow.textContent.trim();
+
+  document.getElementById('gpoNameDisplay').textContent = gpoName;
+
+  // Find "Inbound Rules" section
+  const allSpans = doc.querySelectorAll('span.sectionTitle');
+  let inboundContainer = null;
+  for (const span of allSpans) {
+    if (span.textContent.trim() === 'Inbound Rules') {
+      // Navigate to the container div which holds the rules
+      let el = span.closest('div');
+      if (el && el.nextElementSibling && el.nextElementSibling.classList.contains('container')) {
+        inboundContainer = el.nextElementSibling;
+      }
+      break;
+    }
+  }
+
+  if (!inboundContainer) return [];
+
+  const parsedRules = [];
+  const infoTable = inboundContainer.querySelector('table.info');
+  if (!infoTable) return [];
+
+  const rows = infoTable.querySelectorAll(':scope > tbody > tr, :scope > tr');
+  let currentRule = null;
+
+  for (const row of rows) {
+    const tds = row.querySelectorAll(':scope > td');
+    const ths = row.querySelectorAll(':scope > th');
+
+    // Skip header row
+    if (ths.length > 0) continue;
+
+    // Check if this row contains a subtable (rule details, colspan=2 so 1 td)
+    const subtable = row.querySelector('table.subtable');
+    if (subtable && currentRule) {
+      const subRows = subtable.querySelectorAll('tr');
+      for (const sr of subRows) {
+        const stds = sr.querySelectorAll('td');
+        if (stds.length === 2) {
+          const key = stds[0].textContent.trim();
+          const val = stds[1].textContent.trim();
+          switch (key) {
+            case 'Enabled': currentRule.enabled = val === 'True'; break;
+            case 'Program': currentRule.program = val; break;
+            case 'Action': currentRule.action = val; break;
+            case 'Security': currentRule.security = val; break;
+            case 'Protocol': currentRule.protocol = val; break;
+            case 'Local port': currentRule.localPort = val; break;
+            case 'Remote port': currentRule.remotePort = val; break;
+            case 'ICMP settings': currentRule.icmpSettings = val; break;
+            case 'Local scope': currentRule.localScope = val; break;
+            case 'Remote scope': currentRule.remoteScope = val; break;
+            case 'Profile': currentRule.profile = val; break;
+            case 'Network interface type': currentRule.interfaceType = val; break;
+            case 'Service': currentRule.service = val; break;
+            case 'Allow edge traversal': currentRule.edgeTraversal = val === 'True'; break;
+            case 'Group': currentRule.group = val; break;
+            case 'Authorized computers': currentRule.authComputers = val; break;
+            case 'Authorized users': currentRule.authUsers = val; break;
+          }
+        }
+      }
+      parsedRules.push(currentRule);
+      currentRule = null;
+    } else if (tds.length === 2 && !subtable) {
+      // This is a rule name/description row
+      const name = tds[0].textContent.trim();
+      const desc = tds[1].textContent.trim();
+      if (name && !name.startsWith('This rule might')) {
+        currentRule = {
+          name, description: desc,
+          enabled: false, program: '', action: '', security: '',
+          protocol: '', localPort: '', remotePort: '',
+          icmpSettings: '', localScope: '', remoteScope: '',
+          profile: '', interfaceType: '', service: '',
+          edgeTraversal: false, group: '',
+          authComputers: '', authUsers: ''
+        };
+      }
+    }
+  }
+
+  return parsedRules;
+}
+
+// ── Helpers ──
+function protoLabel(p) { return PROTO_MAP[p] || ('Proto ' + p); }
+function portLabel(p) {
+  if (!p || p === 'Any') return 'Any';
+  return PORT_NAMES[p] ? `${p} (${PORT_NAMES[p]})` : p;
+}
+function portShortName(p) {
+  if (!p || p === 'Any') return '';
+  return PORT_NAMES[p] || '';
+}
+
+function rulesForProfile(profileKey) {
+  // Profile "All" means all three; otherwise check if it includes the specific profile
+  return rules.filter(r => {
+    if (!r.profile) return true;
+    const p = r.profile.toLowerCase();
+    return p === 'all' || p.includes(profileKey.toLowerCase());
+  });
+}
+
+function getEnabledRules(ruleSet) { return ruleSet.filter(r => r.enabled); }
+function getAllowRules(ruleSet) { return ruleSet.filter(r => r.action === 'Allow'); }
+function getBlockRules(ruleSet) { return ruleSet.filter(r => r.action === 'Block'); }
+
+// ── Render all views ──
+function renderAll() {
+  renderOverview();
+  renderEnvironment('corporate', 'Domain', 'Corporate Office', 'Domain Network', '#3b82f6');
+  renderEnvironment('coffeeshop', 'Public', 'Coffee Shop', 'Public Network', '#f59e0b');
+  renderEnvironment('home', 'Private', 'Home Network', 'Private Network', '#22c55e');
+}
+
+// ── Overview ──
+function renderOverview() {
+  const container = document.getElementById('tab-overview');
+  const total = rules.length;
+  const enabled = rules.filter(r => r.enabled).length;
+  const disabled = total - enabled;
+  const allow = rules.filter(r => r.action === 'Allow').length;
+  const block = rules.filter(r => r.action === 'Block').length;
+  const tcpRules = rules.filter(r => r.protocol === '6').length;
+  const icmpRules = rules.filter(r => r.protocol === '1' || r.protocol === '58').length;
+  const withPorts = rules.filter(r => r.localPort && r.localPort !== 'Any').length;
+
+  const profiles = new Set();
+  rules.forEach(r => {
+    const p = (r.profile || '').toLowerCase();
+    if (p === 'all') { profiles.add('Domain'); profiles.add('Private'); profiles.add('Public'); }
+    else {
+      if (p.includes('domain')) profiles.add('Domain');
+      if (p.includes('private')) profiles.add('Private');
+      if (p.includes('public')) profiles.add('Public');
+    }
+  });
+
+  container.innerHTML = `
+    <div class="overview-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Rules</div>
+        <div class="stat-value color-blue">${total}</div>
+        <div class="stat-sub">${enabled} enabled / ${disabled} disabled</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Allow Rules</div>
+        <div class="stat-value color-green">${allow}</div>
+        <div class="stat-sub">${rules.filter(r=>r.action==='Allow'&&r.enabled).length} active</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Block Rules</div>
+        <div class="stat-value color-red">${block}</div>
+        <div class="stat-sub">${rules.filter(r=>r.action==='Block'&&r.enabled).length} active</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">TCP Rules</div>
+        <div class="stat-value color-purple">${tcpRules}</div>
+        <div class="stat-sub">${withPorts} with specific ports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">ICMP / ICMPv6</div>
+        <div class="stat-value color-cyan">${icmpRules}</div>
+        <div class="stat-sub">${rules.filter(r=>r.protocol==='1').length} v4 / ${rules.filter(r=>r.protocol==='58').length} v6</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Profiles</div>
+        <div class="stat-value color-orange">${profiles.size}</div>
+        <div class="stat-sub">${[...profiles].join(', ')}</div>
+      </div>
+    </div>
+
+    <div class="rules-table-wrapper">
+      <div class="table-header">
+        <h2>All Inbound Rules</h2>
+        <div class="table-filter">
+          <input class="filter-input" type="text" placeholder="Search rules..." id="overviewSearch">
+          <select class="filter-select" id="overviewFilterAction">
+            <option value="">All Actions</option>
+            <option value="Allow">Allow</option>
+            <option value="Block">Block</option>
+          </select>
+          <select class="filter-select" id="overviewFilterEnabled">
+            <option value="">All States</option>
+            <option value="true">Enabled</option>
+            <option value="false">Disabled</option>
+          </select>
+        </div>
+      </div>
+      <div class="rules-table-scroll">
+        <table class="rules-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Action</th>
+              <th>Protocol</th>
+              <th>Local Port</th>
+              <th>Remote Scope</th>
+              <th>Enabled</th>
+              <th>Service</th>
+            </tr>
+          </thead>
+          <tbody id="overviewTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  renderOverviewTable();
+
+  document.getElementById('overviewSearch').addEventListener('input', renderOverviewTable);
+  document.getElementById('overviewFilterAction').addEventListener('change', renderOverviewTable);
+  document.getElementById('overviewFilterEnabled').addEventListener('change', renderOverviewTable);
+}
+
+function renderOverviewTable() {
+  const search = (document.getElementById('overviewSearch')?.value || '').toLowerCase();
+  const actionFilter = document.getElementById('overviewFilterAction')?.value || '';
+  const enabledFilter = document.getElementById('overviewFilterEnabled')?.value || '';
+
+  let filtered = rules.filter(r => {
+    if (actionFilter && r.action !== actionFilter) return false;
+    if (enabledFilter === 'true' && !r.enabled) return false;
+    if (enabledFilter === 'false' && r.enabled) return false;
+    if (search) {
+      const haystack = `${r.name} ${r.protocol} ${protoLabel(r.protocol)} ${r.localPort} ${portShortName(r.localPort)} ${r.remoteScope} ${r.service} ${r.action}`.toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+
+  const tbody = document.getElementById('overviewTableBody');
+  tbody.innerHTML = filtered.map((r, i) => `
+    <tr data-idx="${rules.indexOf(r)}" class="${selectedRule === r ? 'selected' : ''}">
+      <td title="${r.name}">${r.name}</td>
+      <td><span class="panel-badge ${r.action === 'Allow' ? 'badge-allow' : 'badge-block'}">${r.action}</span></td>
+      <td>${protoLabel(r.protocol)}</td>
+      <td>${portLabel(r.localPort)}</td>
+      <td title="${r.remoteScope}">${r.remoteScope || 'Any'}</td>
+      <td><span class="panel-badge ${r.enabled ? 'badge-enabled' : 'badge-disabled'}">${r.enabled ? 'Yes' : 'No'}</span></td>
+      <td>${r.service || '—'}</td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const idx = parseInt(tr.dataset.idx);
+      selectRule(rules[idx]);
+    });
+  });
+}
+
+// ── Environment rendering ──
+function renderEnvironment(tabId, profileKey, envName, networkType, accentColor) {
+  const container = document.getElementById('tab-' + tabId);
+  const envRules = rulesForProfile(profileKey);
+  const enabledRules = getEnabledRules(envRules);
+  const allowRules = getAllowRules(enabledRules);
+  const blockRules = getBlockRules(enabledRules);
+
+  // Categorize rules by port/protocol for visual
+  const portRules = enabledRules.filter(r => r.localPort && r.localPort !== 'Any');
+  const anyPortRules = enabledRules.filter(r => !r.localPort || r.localPort === 'Any');
+
+  // Scene icons by environment
+  const scenes = {
+    corporate: { bg: 'corporate', icon: buildingSvg(), profileClass: 'badge-domain' },
+    coffeeshop: { bg: 'coffeeshop', icon: coffeeSvg(), profileClass: 'badge-public' },
+    home: { bg: 'home', icon: houseSvg(), profileClass: 'badge-private' }
+  };
+  const scene = scenes[tabId];
+
+  container.innerHTML = `
+    <div class="env-scene">
+      <div class="env-header">
+        <h2>${envName}</h2>
+        <div class="env-subtitle">Firewall profile: <strong>${networkType}</strong></div>
+        <div class="env-profile-badge ${scene.profileClass}" style="margin-top:.5rem;">${profileKey} Profile Active</div>
+      </div>
+
+      <div class="env-bg ${scene.bg}">
+        <div class="network-lines">
+          ${Array.from({length:5}, (_,i) => `<div class="net-line" style="top:${15+i*18}%;width:${40+Math.random()*40}%;left:${Math.random()*30}%;animation-delay:${i*0.6}s;animation-duration:${2.5+Math.random()*2}s;"></div>`).join('')}
+        </div>
+
+        <div class="computer-scene">
+          <div class="scene-illustration">
+            <div class="computer-svg-wrap">
+              <div class="shield-glow" style="background:${accentColor};"></div>
+              ${scene.icon}
+              ${computerSvg(accentColor)}
+            </div>
+            <div class="env-stats-mini">
+              <div class="env-mini-stat">
+                <div class="num color-green">${allowRules.length}</div>
+                <div class="lbl">Allow</div>
+              </div>
+              <div class="env-mini-stat">
+                <div class="num color-red">${blockRules.length}</div>
+                <div class="lbl">Block</div>
+              </div>
+              <div class="env-mini-stat">
+                <div class="num" style="color:${accentColor}">${enabledRules.length}</div>
+                <div class="lbl">Active</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="port-grid-area">
+            ${portRules.length > 0 ? `
+              <div class="port-grid-title">Specific Port Rules (${portRules.length})</div>
+              <div class="port-grid" id="portGrid-${tabId}-specific">
+                ${portRules.map((r, i) => portTile(r, i)).join('')}
+              </div>
+            ` : ''}
+
+            ${anyPortRules.length > 0 ? `
+              <div class="port-grid-title" style="margin-top:1.25rem;">Protocol-Wide Rules — All Ports (${anyPortRules.length})</div>
+              <div class="port-grid" id="portGrid-${tabId}-any">
+                ${anyPortRules.map((r, i) => portTile(r, i + portRules.length)).join('')}
+              </div>
+            ` : ''}
+
+            ${enabledRules.length === 0 ? '<div class="no-rules-msg">No active rules for this profile</div>' : ''}
+          </div>
+        </div>
+      </div>
+
+      ${envRules.length > enabledRules.length ? `
+        <div style="color:var(--text-muted);font-size:.8rem;text-align:center;">
+          + ${envRules.length - enabledRules.length} disabled rules not shown
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  // Bind port tile clicks
+  container.querySelectorAll('.port-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      const idx = parseInt(tile.dataset.idx);
+      selectRule(rules[idx]);
+      container.querySelectorAll('.port-tile').forEach(t => t.classList.remove('selected'));
+      tile.classList.add('selected');
+    });
+  });
+}
+
+function portTile(r, animIdx) {
+  const idx = rules.indexOf(r);
+  const isAllow = r.action === 'Allow';
+  const portDisplay = r.localPort === 'Any' ? protoLabel(r.protocol) : r.localPort;
+  const shortName = r.localPort !== 'Any' ? portShortName(r.localPort) : '';
+  return `
+    <div class="port-tile ${isAllow ? 'allow' : 'block'} ${selectedRule === r ? 'selected' : ''}"
+         data-idx="${idx}" style="animation-delay:${animIdx * 0.03}s">
+      <div class="port-num">${portDisplay}</div>
+      <div class="port-proto">${r.localPort === 'Any' ? 'All Ports' : protoLabel(r.protocol)}</div>
+      <div class="port-action ${isAllow ? 'allow-text' : 'block-text'}">${r.action}</div>
+      ${shortName ? `<div class="port-name">${shortName}</div>` : `<div class="port-name" title="${r.name}">${r.name}</div>`}
+    </div>
+  `;
+}
+
+// ── Side Panel ──
+function selectRule(rule) {
+  selectedRule = rule;
+  const panel = document.getElementById('sidePanel');
+  const body = document.getElementById('panelBody');
+  document.getElementById('panelTitle').textContent = rule.name;
+
+  const profiles = [];
+  const p = (rule.profile || '').toLowerCase();
+  if (p === 'all' || p.includes('domain')) profiles.push('<span class="badge-profile badge-domain">Domain</span>');
+  if (p === 'all' || p.includes('private')) profiles.push('<span class="badge-profile badge-private">Private</span>');
+  if (p === 'all' || p.includes('public')) profiles.push('<span class="badge-profile badge-public">Public</span>');
+
+  body.innerHTML = `
+    <div class="panel-section">
+      <div class="panel-section-title">Status</div>
+      <div class="panel-row">
+        <span class="label">Action</span>
+        <span class="value"><span class="panel-badge ${rule.action === 'Allow' ? 'badge-allow' : 'badge-block'}">${rule.action}</span></span>
+      </div>
+      <div class="panel-row">
+        <span class="label">Enabled</span>
+        <span class="value"><span class="panel-badge ${rule.enabled ? 'badge-enabled' : 'badge-disabled'}">${rule.enabled ? 'Enabled' : 'Disabled'}</span></span>
+      </div>
+      ${rule.security ? `<div class="panel-row"><span class="label">Security</span><span class="value">${rule.security}</span></div>` : ''}
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-title">Network</div>
+      <div class="panel-row">
+        <span class="label">Protocol</span>
+        <span class="value">${protoLabel(rule.protocol)} (${rule.protocol})</span>
+      </div>
+      <div class="panel-row">
+        <span class="label">Local Port</span>
+        <span class="value">${portLabel(rule.localPort)}</span>
+      </div>
+      <div class="panel-row">
+        <span class="label">Remote Port</span>
+        <span class="value">${portLabel(rule.remotePort)}</span>
+      </div>
+      ${rule.icmpSettings && rule.icmpSettings !== 'Any' ? `<div class="panel-row"><span class="label">ICMP Settings</span><span class="value">${rule.icmpSettings}</span></div>` : ''}
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-title">Scope</div>
+      <div class="panel-row">
+        <span class="label">Local Scope</span>
+        <span class="value">${rule.localScope || 'Any'}</span>
+      </div>
+      <div class="panel-row">
+        <span class="label">Remote Scope</span>
+        <span class="value">${rule.remoteScope || 'Any'}</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-title">Profiles</div>
+      <div style="padding:.25rem 0;">${profiles.join(' ')}</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-title">Application</div>
+      <div class="panel-row">
+        <span class="label">Program</span>
+        <span class="value">${rule.program || 'Any'}</span>
+      </div>
+      <div class="panel-row">
+        <span class="label">Service</span>
+        <span class="value">${rule.service || 'Any'}</span>
+      </div>
+      <div class="panel-row">
+        <span class="label">Interface Type</span>
+        <span class="value">${rule.interfaceType || 'All'}</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-title">Advanced</div>
+      <div class="panel-row">
+        <span class="label">Edge Traversal</span>
+        <span class="value">${rule.edgeTraversal ? 'Allowed' : 'Not Allowed'}</span>
+      </div>
+      ${rule.group ? `<div class="panel-row"><span class="label">Group</span><span class="value">${rule.group}</span></div>` : ''}
+      ${rule.description && rule.description !== 'b' ? `<div class="panel-row"><span class="label">Description</span><span class="value">${rule.description}</span></div>` : ''}
+    </div>
+  `;
+
+  panel.classList.add('open');
+
+  // Update table selection if on overview
+  document.querySelectorAll('.rules-table tbody tr').forEach(tr => {
+    tr.classList.toggle('selected', parseInt(tr.dataset.idx) === rules.indexOf(rule));
+  });
+}
+
+function closeSidePanel() {
+  document.getElementById('sidePanel').classList.remove('open');
+  selectedRule = null;
+  document.querySelectorAll('.rules-table tbody tr.selected').forEach(tr => tr.classList.remove('selected'));
+  document.querySelectorAll('.port-tile.selected').forEach(t => t.classList.remove('selected'));
+}
+
+document.getElementById('panelClose').addEventListener('click', closeSidePanel);
+
+// ── Tab switching ──
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── SVG Helpers ──
+function computerSvg(accent) {
+  return `
+  <svg width="160" height="140" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Monitor body -->
+    <rect x="15" y="20" width="130" height="85" rx="6" fill="#1a2234" stroke="${accent}" stroke-width="1.5"/>
+    <!-- Screen -->
+    <rect x="22" y="27" width="116" height="65" rx="3" fill="#0a0e1a"/>
+    <!-- Screen glow lines -->
+    <line x1="30" y1="40" x2="70" y2="40" stroke="${accent}" stroke-width="1" opacity="0.4"/>
+    <line x1="30" y1="48" x2="90" y2="48" stroke="${accent}" stroke-width="1" opacity="0.3"/>
+    <line x1="30" y1="56" x2="60" y2="56" stroke="${accent}" stroke-width="1" opacity="0.4"/>
+    <line x1="30" y1="64" x2="80" y2="64" stroke="${accent}" stroke-width="1" opacity="0.3"/>
+    <line x1="30" y1="72" x2="55" y2="72" stroke="${accent}" stroke-width="1" opacity="0.2"/>
+    <!-- Shield icon on screen -->
+    <path d="M110 42 L120 38 L130 42 L130 52 C130 58 120 64 120 64 C120 64 110 58 110 52 Z"
+          fill="none" stroke="${accent}" stroke-width="1.5" opacity="0.6"/>
+    <polyline points="115,50 119,54 126,46" stroke="${accent}" stroke-width="1.5" opacity="0.6"/>
+    <!-- Stand -->
+    <rect x="65" y="105" width="30" height="6" rx="2" fill="#2d3a52"/>
+    <rect x="55" y="111" width="50" height="5" rx="2.5" fill="#2d3a52"/>
+    <!-- Power indicator -->
+    <circle cx="80" cy="97" r="2" fill="${accent}" opacity="0.8">
+      <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite"/>
+    </circle>
+  </svg>`;
+}
+
+function buildingSvg() {
+  return `
+  <svg width="60" height="50" viewBox="0 0 60 50" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:-10px;right:-10px;opacity:.5;">
+    <rect x="15" y="5" width="30" height="40" rx="2" fill="#1e3a5f" stroke="#3b82f6" stroke-width=".5"/>
+    <rect x="20" y="10" width="5" height="5" rx=".5" fill="#3b82f6" opacity=".4"/>
+    <rect x="28" y="10" width="5" height="5" rx=".5" fill="#3b82f6" opacity=".3"/>
+    <rect x="36" y="10" width="5" height="5" rx=".5" fill="#3b82f6" opacity=".4"/>
+    <rect x="20" y="18" width="5" height="5" rx=".5" fill="#3b82f6" opacity=".3"/>
+    <rect x="28" y="18" width="5" height="5" rx=".5" fill="#3b82f6" opacity=".4"/>
+    <rect x="36" y="18" width="5" height="5" rx=".5" fill="#3b82f6" opacity=".3"/>
+    <rect x="20" y="26" width="5" height="5" rx=".5" fill="#3b82f6" opacity=".4"/>
+    <rect x="28" y="26" width="5" height="5" rx=".5" fill="#3b82f6" opacity=".3"/>
+    <rect x="36" y="26" width="5" height="5" rx=".5" fill="#3b82f6" opacity=".4"/>
+    <rect x="26" y="35" width="8" height="10" rx="1" fill="#3b82f6" opacity=".2"/>
+  </svg>`;
+}
+
+function coffeeSvg() {
+  return `
+  <svg width="60" height="50" viewBox="0 0 60 50" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:-10px;right:-10px;opacity:.5;">
+    <path d="M15 18 H40 V40 C40 43 37 45 34 45 H21 C18 45 15 43 15 40 Z" fill="#5a3e1b" stroke="#f59e0b" stroke-width=".5"/>
+    <path d="M40 22 H45 C47 22 49 24 49 27 C49 30 47 32 45 32 H40" stroke="#f59e0b" stroke-width=".5" fill="none"/>
+    <path d="M22 14 Q23 8 25 14" stroke="#f59e0b" stroke-width=".5" opacity=".4"/>
+    <path d="M28 12 Q29 6 31 12" stroke="#f59e0b" stroke-width=".5" opacity=".3"/>
+    <path d="M34 14 Q35 8 37 14" stroke="#f59e0b" stroke-width=".5" opacity=".4"/>
+  </svg>`;
+}
+
+function houseSvg() {
+  return `
+  <svg width="60" height="50" viewBox="0 0 60 50" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:-10px;right:-10px;opacity:.5;">
+    <path d="M30 8 L10 25 H15 V42 H25 V32 H35 V42 H45 V25 H50 Z" fill="#1a4731" stroke="#22c55e" stroke-width=".5"/>
+    <rect x="22" y="26" width="6" height="6" rx=".5" fill="#22c55e" opacity=".3"/>
+    <rect x="32" y="26" width="6" height="6" rx=".5" fill="#22c55e" opacity=".3"/>
+  </svg>`;
+}
+</script>
+</body>
+</html>
