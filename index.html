@@ -577,6 +577,202 @@
     font-size: .9rem;
   }
 
+  /* ── Maintenance Task / Cart UI ── */
+  .overlay-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.55);
+    z-index: 500;
+    animation: fadeIn .2s ease;
+  }
+  .modal-card {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    z-index: 510;
+    width: 400px; max-width: 92vw;
+    animation: slideUp .25s ease;
+    display: flex; flex-direction: column;
+    max-height: 90vh;
+  }
+  .modal-card.wide { width: 620px; }
+  .modal-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600; font-size: 1rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-body { padding: 1.25rem; overflow-y: auto; flex: 1; }
+  .modal-footer {
+    padding: .75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    display: flex; gap: .5rem; justify-content: flex-end;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+  }
+  .form-group { display: flex; flex-direction: column; gap: .25rem; }
+  .form-group.full-width { grid-column: 1 / -1; }
+  .form-group label { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); font-weight: 600; }
+  .form-group input, .form-group select, .form-group textarea {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: .4rem .65rem;
+    border-radius: 8px;
+    font-size: .82rem;
+    outline: none;
+    font-family: inherit;
+    transition: border-color .2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent-blue); }
+
+  /* Context menu */
+  #ctxMenu {
+    position: fixed;
+    z-index: 600;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .35rem 0;
+    min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    display: none;
+  }
+  #ctxMenu.visible { display: block; }
+  .ctx-item {
+    padding: .5rem 1rem;
+    font-size: .82rem;
+    cursor: pointer;
+    transition: background .15s;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .ctx-item:hover { background: var(--bg-card-hover); }
+  .ctx-item.danger { color: var(--accent-red); }
+  .ctx-item.danger:hover { background: rgba(239,68,68,.1); }
+
+  /* Topbar maintenance buttons */
+  .mnt-btn, .cart-btn {
+    border: none; padding: .4rem .85rem; border-radius: 8px;
+    font-size: .8rem; font-weight: 600; cursor: pointer; transition: all .2s;
+    white-space: nowrap;
+  }
+  .mnt-btn { background: var(--accent-orange); color: #000; }
+  .mnt-btn:hover { filter: brightness(1.1); }
+  .mnt-active-label {
+    font-size: .78rem; color: var(--accent-orange); font-weight: 600;
+    white-space: nowrap;
+  }
+  .cart-btn { background: var(--accent-purple); color: #fff; position: relative; }
+  .cart-btn:hover { filter: brightness(1.15); }
+  .cart-badge {
+    display: inline-block;
+    background: #fff; color: var(--accent-purple);
+    font-size: .65rem; font-weight: 700;
+    border-radius: 9999px; min-width: 18px; height: 18px;
+    line-height: 18px; text-align: center;
+    margin-left: .35rem;
+  }
+
+  /* Cart drawer */
+  #cartDrawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 580px; max-width: 95vw;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    z-index: 450;
+    transform: translateX(100%);
+    transition: transform .3s ease;
+    display: flex; flex-direction: column;
+  }
+  #cartDrawer.open { transform: translateX(0); }
+  #cartBackdrop {
+    position: fixed; inset: 0;
+    z-index: 440;
+    display: none;
+  }
+  #cartBackdrop.visible { display: block; }
+  .cart-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .cart-header h3 { font-size: 1rem; font-weight: 600; }
+  .cart-body { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .75rem; }
+  .cart-footer {
+    padding: .75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    display: flex; gap: .5rem; justify-content: flex-end;
+    flex-shrink: 0;
+  }
+
+  /* Cart item cards */
+  .cart-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .85rem 1rem;
+  }
+  .cart-item-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+  .cart-type-badge {
+    font-size: .65rem; font-weight: 700; text-transform: uppercase;
+    padding: .15rem .55rem; border-radius: 6px;
+  }
+  .cart-type-badge.addition { background: rgba(34,197,94,.15); color: var(--accent-green); }
+  .cart-type-badge.removal { background: rgba(239,68,68,.15); color: var(--accent-red); }
+  .cart-type-badge.modification { background: rgba(245,158,11,.15); color: var(--accent-orange); }
+  .cart-item-name { font-size: .85rem; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cart-item-remove {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-size: 1rem; padding: .15rem .35rem; transition: color .2s;
+  }
+  .cart-item-remove:hover { color: var(--accent-red); }
+  .cart-item-notes {
+    width: 100%; min-height: 48px; margin-top: .5rem;
+    resize: vertical;
+  }
+  .cart-diff-toggle {
+    background: none; border: none; color: var(--accent-blue);
+    cursor: pointer; font-size: .75rem; margin-top: .4rem; padding: 0;
+  }
+  .cart-diff-toggle:hover { text-decoration: underline; }
+  .cart-diff-table { width: 100%; border-collapse: collapse; margin-top: .5rem; font-size: .78rem; }
+  .cart-diff-table th { text-align: left; padding: .3rem .5rem; color: var(--text-muted); font-size: .7rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  .cart-diff-table td { padding: .3rem .5rem; border-bottom: 1px solid rgba(45,58,82,.4); }
+  .diff-old { color: var(--accent-red); text-decoration: line-through; opacity: .7; }
+  .diff-new { color: var(--accent-green); }
+
+  /* Table row cart indicators */
+  .rules-table tbody tr.in-cart-modification td:first-child { box-shadow: inset 3px 0 0 var(--accent-orange); }
+  .rules-table tbody tr.in-cart-removal td:first-child { box-shadow: inset 3px 0 0 var(--accent-red); }
+
+  /* Button classes */
+  .btn {
+    border: none; padding: .45rem .95rem; border-radius: 8px;
+    font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .2s;
+  }
+  .btn-primary { background: var(--accent-blue); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-secondary { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent-blue); color: var(--text-primary); }
+  .btn-danger { background: var(--accent-red); color: #fff; }
+  .btn-danger:hover { filter: brightness(1.1); }
+  .btn-success { background: var(--accent-green); color: #000; }
+  .btn-success:hover { filter: brightness(1.1); }
+  .add-rule-btn {
+    background: var(--accent-green); color: #000;
+    border: none; padding: .35rem .75rem; border-radius: 8px;
+    font-size: .78rem; font-weight: 600; cursor: pointer; transition: all .2s;
+    display: none;
+  }
+  .add-rule-btn:hover { filter: brightness(1.1); }
+  .add-rule-btn.visible { display: inline-block; }
+
   /* Data flow lines for computer visual */
   .data-flow-container {
     position: absolute;
@@ -627,6 +823,9 @@
   <div class="topbar">
     <div class="logo">FW Visualizer</div>
     <div class="gpo-name" id="gpoNameDisplay"></div>
+    <span class="mnt-active-label" id="mntActiveLabel" style="display:none"></span>
+    <button class="mnt-btn" id="mntBtn">Maintenance Task</button>
+    <button class="cart-btn" id="cartBtn" style="display:none">Cart <span class="cart-badge" id="cartBadge">0</span></button>
     <button class="reload-btn" id="reloadBtn">Load New File</button>
   </div>
   <div class="tab-nav" id="tabNav">
@@ -671,11 +870,121 @@
   </div>
 </div>
 
+<!-- Context Menu -->
+<div id="ctxMenu">
+  <div class="ctx-item" id="ctxReview">&#128269; Review Rule</div>
+  <div class="ctx-item danger" id="ctxDelete">&#128465; Delete Rule</div>
+</div>
+
+<!-- MNT Modal -->
+<div id="mntModal" style="display:none">
+  <div class="overlay-backdrop" id="mntBackdrop"></div>
+  <div class="modal-card">
+    <div class="modal-header">Start Maintenance Task</div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>MNT Number</label>
+        <input type="text" id="mntNumberInput" placeholder="e.g. MNT-2026-0042">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="mntCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="mntStartBtn">Start Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- Review Rule Modal -->
+<div id="reviewModal" style="display:none">
+  <div class="overlay-backdrop" id="reviewBackdrop"></div>
+  <div class="modal-card wide">
+    <div class="modal-header"><span id="reviewModalTitle">Review Rule</span></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full-width"><label>Name</label><input type="text" id="rf-name"></div>
+        <div class="form-group full-width"><label>Description</label><input type="text" id="rf-description"></div>
+        <div class="form-group"><label>Action</label><select id="rf-action"><option value="Allow">Allow</option><option value="Block">Block</option></select></div>
+        <div class="form-group"><label>Enabled</label><select id="rf-enabled"><option value="true">True</option><option value="false">False</option></select></div>
+        <div class="form-group"><label>Protocol</label><input type="text" id="rf-protocol"></div>
+        <div class="form-group"><label>Local Port</label><input type="text" id="rf-localPort"></div>
+        <div class="form-group"><label>Remote Port</label><input type="text" id="rf-remotePort"></div>
+        <div class="form-group"><label>Local Scope</label><input type="text" id="rf-localScope"></div>
+        <div class="form-group"><label>Remote Scope</label><input type="text" id="rf-remoteScope"></div>
+        <div class="form-group"><label>Profile</label><input type="text" id="rf-profile"></div>
+        <div class="form-group"><label>Program</label><input type="text" id="rf-program"></div>
+        <div class="form-group"><label>Service</label><input type="text" id="rf-service"></div>
+        <div class="form-group"><label>Interface Type</label><input type="text" id="rf-interfaceType"></div>
+        <div class="form-group"><label>Security</label><input type="text" id="rf-security"></div>
+        <div class="form-group"><label>ICMP Settings</label><input type="text" id="rf-icmpSettings"></div>
+        <div class="form-group"><label>Edge Traversal</label><select id="rf-edgeTraversal"><option value="false">False</option><option value="true">True</option></select></div>
+        <div class="form-group"><label>Group</label><input type="text" id="rf-group"></div>
+        <div class="form-group"><label>Auth Computers</label><input type="text" id="rf-authComputers"></div>
+        <div class="form-group"><label>Auth Users</label><input type="text" id="rf-authUsers"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="reviewCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="reviewSubmitBtn">Add to Cart</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Rule Modal -->
+<div id="addRuleModal" style="display:none">
+  <div class="overlay-backdrop" id="addRuleBackdrop"></div>
+  <div class="modal-card wide">
+    <div class="modal-header">Add New Rule</div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full-width"><label>Name</label><input type="text" id="arf-name"></div>
+        <div class="form-group full-width"><label>Description</label><input type="text" id="arf-description"></div>
+        <div class="form-group"><label>Action</label><select id="arf-action"><option value="Allow">Allow</option><option value="Block">Block</option></select></div>
+        <div class="form-group"><label>Enabled</label><select id="arf-enabled"><option value="true">True</option><option value="false">False</option></select></div>
+        <div class="form-group"><label>Protocol</label><input type="text" id="arf-protocol" value="Any"></div>
+        <div class="form-group"><label>Local Port</label><input type="text" id="arf-localPort" value="Any"></div>
+        <div class="form-group"><label>Remote Port</label><input type="text" id="arf-remotePort" value="Any"></div>
+        <div class="form-group"><label>Local Scope</label><input type="text" id="arf-localScope"></div>
+        <div class="form-group"><label>Remote Scope</label><input type="text" id="arf-remoteScope"></div>
+        <div class="form-group"><label>Profile</label><input type="text" id="arf-profile" value="All"></div>
+        <div class="form-group"><label>Program</label><input type="text" id="arf-program"></div>
+        <div class="form-group"><label>Service</label><input type="text" id="arf-service"></div>
+        <div class="form-group"><label>Interface Type</label><input type="text" id="arf-interfaceType"></div>
+        <div class="form-group"><label>Security</label><input type="text" id="arf-security"></div>
+        <div class="form-group"><label>ICMP Settings</label><input type="text" id="arf-icmpSettings"></div>
+        <div class="form-group"><label>Edge Traversal</label><select id="arf-edgeTraversal"><option value="false">False</option><option value="true">True</option></select></div>
+        <div class="form-group"><label>Group</label><input type="text" id="arf-group"></div>
+        <div class="form-group"><label>Auth Computers</label><input type="text" id="arf-authComputers"></div>
+        <div class="form-group"><label>Auth Users</label><input type="text" id="arf-authUsers"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="addRuleCancelBtn">Cancel</button>
+      <button class="btn btn-success" id="addRuleSubmitBtn">Add to Cart</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cart Drawer -->
+<div id="cartBackdrop"></div>
+<div id="cartDrawer">
+  <div class="cart-header">
+    <h3>Change Cart</h3>
+    <button class="panel-close" id="cartDrawerClose">&times;</button>
+  </div>
+  <div class="cart-body" id="cartBody"></div>
+  <div class="cart-footer">
+    <button class="btn btn-danger" id="endSessionBtn">End Session</button>
+    <button class="btn btn-success" id="downloadMdBtn">Download Markdown</button>
+  </div>
+</div>
+
 <script>
 // ── State ──
 let rules = [];
 let gpoName = '';
 let selectedRule = null;
+let cartSession = null; // { mntNumber, createdAt, items[] }
+let _ctxRuleIdx = null; // currently right-clicked rule index
 
 // ── Protocol map ──
 const PROTO_MAP = {
@@ -722,6 +1031,11 @@ document.getElementById('reloadBtn').addEventListener('click', () => {
   fileInput.value = '';
   rules = [];
   selectedRule = null;
+  cartSession = null;
+  document.getElementById('mntActiveLabel').style.display = 'none';
+  document.getElementById('cartBtn').style.display = 'none';
+  document.getElementById('mntBtn').style.display = '';
+  closeCartDrawer();
   closeSidePanel();
 });
 
@@ -948,6 +1262,7 @@ function renderOverview() {
     <div class="rules-table-wrapper">
       <div class="table-header">
         <h2>All Inbound Rules</h2>
+        <button class="add-rule-btn ${cartSession ? 'visible' : ''}" id="addRuleBtn" onclick="openAddRuleModal()">+ Add Rule</button>
         <div class="table-filter">
           <input class="filter-input" type="text" placeholder="Search rules..." id="overviewSearch">
           <select class="filter-select" id="overviewFilterAction">
@@ -1027,23 +1342,33 @@ function renderOverviewTable() {
   });
 
   const tbody = document.getElementById('overviewTableBody');
-  tbody.innerHTML = filtered.map((r, i) => `
-    <tr data-idx="${rules.indexOf(r)}" class="${selectedRule === r ? 'selected' : ''}">
-      <td title="${r.name}">${r.name}</td>
+  tbody.innerHTML = filtered.map((r, i) => {
+    const idx = rules.indexOf(r);
+    const ci = cartItemForRuleIdx(idx);
+    let rowClass = selectedRule === r ? 'selected' : '';
+    if (ci && ci.type === 'removal') rowClass += ' in-cart-removal';
+    else if (ci && ci.type === 'modification') rowClass += ' in-cart-modification';
+    return `<tr data-idx="${idx}" class="${rowClass}">
+      <td title="${escHtml(r.name)}">${escHtml(r.name)}</td>
       <td><span class="panel-badge ${r.action === 'Allow' ? 'badge-allow' : 'badge-block'}">${r.action}</span></td>
       <td>${protoLabel(r.protocol)}</td>
       <td>${portLabel(r.localPort)}</td>
-      <td title="${r.remoteScope}">${r.remoteScope || 'Any'}</td>
+      <td title="${escHtml(r.remoteScope)}">${r.remoteScope || 'Any'}</td>
       <td><span class="panel-badge ${r.enabled ? 'badge-enabled' : 'badge-disabled'}">${r.enabled ? 'Yes' : 'No'}</span></td>
       <td>${r.security ? '<span class="panel-badge badge-enabled" style="font-size:.65rem;">Auth</span>' : '<span style="color:var(--text-muted)">—</span>'}</td>
       <td>${r.service || '—'}</td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 
   tbody.querySelectorAll('tr').forEach(tr => {
     tr.addEventListener('click', () => {
       const idx = parseInt(tr.dataset.idx);
       selectRule(rules[idx]);
+    });
+    tr.addEventListener('contextmenu', e => {
+      if (!cartSession) return;
+      e.preventDefault();
+      showContextMenu(e, parseInt(tr.dataset.idx));
     });
   });
 }
@@ -1382,6 +1707,433 @@ function houseSvg() {
     <rect x="32" y="26" width="6" height="6" rx=".5" fill="#22c55e" opacity=".3"/>
   </svg>`;
 }
+
+// ── Cart / Maintenance Task ──
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function cartItemForRuleIdx(idx) {
+  if (!cartSession) return null;
+  return cartSession.items.find(ci => ci.ruleIdx === idx && ci.type !== 'addition') || null;
+}
+
+function updateCartBadge() {
+  const n = cartSession ? cartSession.items.length : 0;
+  document.getElementById('cartBadge').textContent = n;
+}
+
+function startCartSession(mntNumber) {
+  cartSession = { mntNumber, createdAt: new Date(), items: [] };
+  document.getElementById('mntBtn').style.display = 'none';
+  document.getElementById('mntActiveLabel').textContent = mntNumber;
+  document.getElementById('mntActiveLabel').style.display = '';
+  document.getElementById('cartBtn').style.display = '';
+  updateCartBadge();
+  renderOverview();
+}
+
+function endCartSession() {
+  if (!confirm('End this maintenance session? All cart items will be lost.')) return;
+  cartSession = null;
+  document.getElementById('mntBtn').style.display = '';
+  document.getElementById('mntActiveLabel').style.display = 'none';
+  document.getElementById('cartBtn').style.display = 'none';
+  closeCartDrawer();
+  renderOverview();
+}
+
+function addToCart(item) {
+  cartSession.items.push(item);
+  updateCartBadge();
+  renderOverviewTable();
+}
+
+function removeFromCart(itemId) {
+  cartSession.items = cartSession.items.filter(i => i.id !== itemId);
+  updateCartBadge();
+  renderCartDrawer();
+  renderOverviewTable();
+}
+
+// ── MNT Modal ──
+function openMntModal() {
+  document.getElementById('mntNumberInput').value = '';
+  document.getElementById('mntModal').style.display = '';
+  document.getElementById('mntNumberInput').focus();
+}
+function closeMntModal() { document.getElementById('mntModal').style.display = 'none'; }
+
+// ── Context Menu ──
+function showContextMenu(e, ruleIdx) {
+  _ctxRuleIdx = ruleIdx;
+  const menu = document.getElementById('ctxMenu');
+  const ci = cartItemForRuleIdx(ruleIdx);
+  const reviewEl = document.getElementById('ctxReview');
+  const deleteEl = document.getElementById('ctxDelete');
+  if (ci && ci.type === 'removal') {
+    reviewEl.innerHTML = '&#128269; Edit in Cart';
+    deleteEl.innerHTML = '&#8634; Undo Delete';
+    deleteEl.className = 'ctx-item';
+  } else if (ci && ci.type === 'modification') {
+    reviewEl.innerHTML = '&#128269; Edit Cart Item';
+    deleteEl.innerHTML = '&#128465; Delete Rule';
+    deleteEl.className = 'ctx-item danger';
+  } else {
+    reviewEl.innerHTML = '&#128269; Review Rule';
+    deleteEl.innerHTML = '&#128465; Delete Rule';
+    deleteEl.className = 'ctx-item danger';
+  }
+  // Position with viewport clamping
+  let x = e.clientX, y = e.clientY;
+  menu.classList.add('visible');
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  if (x + mw > window.innerWidth) x = window.innerWidth - mw - 4;
+  if (y + mh > window.innerHeight) y = window.innerHeight - mh - 4;
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+}
+function hideContextMenu() {
+  document.getElementById('ctxMenu').classList.remove('visible');
+  _ctxRuleIdx = null;
+}
+document.addEventListener('click', hideContextMenu);
+
+// ── Review Rule Modal ──
+const RULE_FIELDS = ['name','description','action','enabled','protocol','localPort','remotePort',
+  'localScope','remoteScope','profile','program','service','interfaceType','security',
+  'icmpSettings','edgeTraversal','group','authComputers','authUsers'];
+
+let _reviewRuleIdx = null;
+let _reviewExistingItem = null;
+
+function openReviewModal(ruleIdx, existingItem) {
+  _reviewRuleIdx = ruleIdx;
+  _reviewExistingItem = existingItem || null;
+  const r = existingItem ? existingItem.rule : rules[ruleIdx];
+  document.getElementById('reviewModalTitle').textContent = existingItem ? 'Edit Cart Item' : 'Review Rule';
+  document.getElementById('reviewSubmitBtn').textContent = existingItem ? 'Update Cart Item' : 'Add to Cart';
+  // Fill form
+  for (const f of RULE_FIELDS) {
+    const el = document.getElementById('rf-' + f);
+    if (!el) continue;
+    if (el.tagName === 'SELECT') {
+      el.value = String(r[f]);
+    } else {
+      el.value = r[f] || '';
+    }
+  }
+  document.getElementById('reviewModal').style.display = '';
+}
+function closeReviewModal() {
+  document.getElementById('reviewModal').style.display = 'none';
+  _reviewRuleIdx = null;
+  _reviewExistingItem = null;
+}
+function submitReviewModal() {
+  const newRule = {};
+  for (const f of RULE_FIELDS) {
+    const el = document.getElementById('rf-' + f);
+    if (!el) continue;
+    if (f === 'enabled') newRule[f] = el.value === 'true';
+    else if (f === 'edgeTraversal') newRule[f] = el.value === 'true';
+    else newRule[f] = el.value;
+  }
+  if (!newRule.name) { alert('Rule name is required.'); return; }
+
+  if (_reviewExistingItem) {
+    // Update existing cart item
+    _reviewExistingItem.rule = newRule;
+    closeReviewModal();
+    renderCartDrawer();
+    renderOverviewTable();
+    return;
+  }
+
+  const originalRule = {...rules[_reviewRuleIdx]};
+  const item = {
+    id: generateId(),
+    type: 'modification',
+    ruleIdx: _reviewRuleIdx,
+    rule: newRule,
+    originalRule,
+    notes: ''
+  };
+  addToCart(item);
+  closeReviewModal();
+}
+
+// ── Add Rule Modal ──
+function openAddRuleModal() {
+  // Reset form to defaults
+  document.getElementById('arf-name').value = '';
+  document.getElementById('arf-description').value = '';
+  document.getElementById('arf-action').value = 'Allow';
+  document.getElementById('arf-enabled').value = 'true';
+  document.getElementById('arf-protocol').value = 'Any';
+  document.getElementById('arf-localPort').value = 'Any';
+  document.getElementById('arf-remotePort').value = 'Any';
+  document.getElementById('arf-localScope').value = '';
+  document.getElementById('arf-remoteScope').value = '';
+  document.getElementById('arf-profile').value = 'All';
+  document.getElementById('arf-program').value = '';
+  document.getElementById('arf-service').value = '';
+  document.getElementById('arf-interfaceType').value = '';
+  document.getElementById('arf-security').value = '';
+  document.getElementById('arf-icmpSettings').value = '';
+  document.getElementById('arf-edgeTraversal').value = 'false';
+  document.getElementById('arf-group').value = '';
+  document.getElementById('arf-authComputers').value = '';
+  document.getElementById('arf-authUsers').value = '';
+  document.getElementById('addRuleModal').style.display = '';
+  document.getElementById('arf-name').focus();
+}
+function closeAddRuleModal() { document.getElementById('addRuleModal').style.display = 'none'; }
+function submitAddRuleModal() {
+  const newRule = {};
+  for (const f of RULE_FIELDS) {
+    const el = document.getElementById('arf-' + f);
+    if (!el) continue;
+    if (f === 'enabled') newRule[f] = el.value === 'true';
+    else if (f === 'edgeTraversal') newRule[f] = el.value === 'true';
+    else newRule[f] = el.value;
+  }
+  if (!newRule.name) { alert('Rule name is required.'); return; }
+  const item = {
+    id: generateId(),
+    type: 'addition',
+    ruleIdx: null,
+    rule: newRule,
+    originalRule: null,
+    notes: ''
+  };
+  addToCart(item);
+  closeAddRuleModal();
+}
+
+// ── Cart Drawer ──
+function openCartDrawer() {
+  renderCartDrawer();
+  document.getElementById('cartDrawer').classList.add('open');
+  document.getElementById('cartBackdrop').classList.add('visible');
+}
+function closeCartDrawer() {
+  document.getElementById('cartDrawer').classList.remove('open');
+  document.getElementById('cartBackdrop').classList.remove('visible');
+}
+function renderCartDrawer() {
+  const body = document.getElementById('cartBody');
+  if (!cartSession || cartSession.items.length === 0) {
+    body.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem;">Cart is empty. Right-click rules in the Overview table to add changes.</div>';
+    return;
+  }
+  body.innerHTML = cartSession.items.map(item => {
+    const badge = `<span class="cart-type-badge ${item.type}">${item.type}</span>`;
+    const diffBtn = item.type === 'modification'
+      ? `<button class="cart-diff-toggle" onclick="toggleDiff('${item.id}')">Show changes</button><div id="diff-${item.id}" style="display:none">${buildDiffHtml(item)}</div>`
+      : '';
+    return `<div class="cart-item" data-item-id="${item.id}">
+      <div class="cart-item-header">
+        ${badge}
+        <span class="cart-item-name" title="${escHtml(item.rule.name)}">${escHtml(item.rule.name)}</span>
+        ${item.type === 'modification' ? `<button class="btn btn-secondary" style="padding:.25rem .5rem;font-size:.7rem;" onclick="editCartItem('${item.id}')">Edit</button>` : ''}
+        <button class="cart-item-remove" onclick="removeFromCart('${item.id}')" title="Remove from cart">&times;</button>
+      </div>
+      ${diffBtn}
+      <textarea class="form-group cart-item-notes" placeholder="Add notes about this change..." onchange="updateCartItemNotes('${item.id}', this.value)">${escHtml(item.notes)}</textarea>
+    </div>`;
+  }).join('');
+}
+
+function editCartItem(itemId) {
+  const item = cartSession.items.find(i => i.id === itemId);
+  if (!item) return;
+  openReviewModal(item.ruleIdx, item);
+}
+
+function buildDiffHtml(item) {
+  if (!item.originalRule) return '';
+  let rows = '';
+  for (const f of RULE_FIELDS) {
+    const oldVal = String(item.originalRule[f] ?? '');
+    const newVal = String(item.rule[f] ?? '');
+    if (oldVal !== newVal) {
+      rows += `<tr><td style="font-weight:600">${escHtml(f)}</td><td class="diff-old">${escHtml(oldVal)}</td><td class="diff-new">${escHtml(newVal)}</td></tr>`;
+    }
+  }
+  if (!rows) return '<div style="color:var(--text-muted);font-size:.78rem;padding:.3rem;">No changes detected.</div>';
+  return `<table class="cart-diff-table"><thead><tr><th>Field</th><th>Original</th><th>New</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function toggleDiff(itemId) {
+  const el = document.getElementById('diff-' + itemId);
+  if (!el) return;
+  const visible = el.style.display !== 'none';
+  el.style.display = visible ? 'none' : '';
+  // Update button text
+  const btn = el.previousElementSibling;
+  if (btn) btn.textContent = visible ? 'Show changes' : 'Hide changes';
+}
+
+function updateCartItemNotes(itemId, value) {
+  const item = cartSession.items.find(i => i.id === itemId);
+  if (item) item.notes = value;
+}
+
+// ── Markdown Export ──
+function buildMarkdown() {
+  const s = cartSession;
+  const additions = s.items.filter(i => i.type === 'addition');
+  const removals = s.items.filter(i => i.type === 'removal');
+  const modifications = s.items.filter(i => i.type === 'modification');
+
+  let md = `# Firewall Change Request: ${s.mntNumber}\n\n`;
+  md += `**GPO:** ${gpoName}\n`;
+  md += `**Created:** ${s.createdAt.toISOString().split('T')[0]}\n\n`;
+
+  // Section 1: Summary
+  md += `## 1. Summary of Changes\n\n`;
+  md += `| Action | Rule Name | Notes |\n|--------|-----------|-------|\n`;
+  for (const item of s.items) {
+    const icon = item.type === 'addition' ? '➕' : item.type === 'removal' ? '🗑️' : '✏️';
+    md += `| ${icon} ${item.type} | ${item.rule.name} | ${item.notes.replace(/\n/g,' ').replace(/\|/g,'\\|')} |\n`;
+  }
+  md += '\n';
+
+  // Helper for full rule settings table
+  function ruleTable(r) {
+    let t = `| Setting | Value |\n|---------|-------|\n`;
+    for (const f of RULE_FIELDS) {
+      t += `| ${f} | ${String(r[f] ?? '')} |\n`;
+    }
+    return t;
+  }
+
+  // Section 2A: Additions
+  if (additions.length) {
+    md += `## 2A. Rule Additions\n\n`;
+    for (const item of additions) {
+      md += `### ${item.rule.name}\n\n`;
+      if (item.notes) md += `> ${item.notes.replace(/\n/g,'\n> ')}\n\n`;
+      md += ruleTable(item.rule) + '\n';
+    }
+  }
+
+  // Section 2B: Removals
+  if (removals.length) {
+    md += `## 2B. Rule Removals\n\n`;
+    for (const item of removals) {
+      md += `### ${item.rule.name}\n\n`;
+      if (item.notes) md += `> ${item.notes.replace(/\n/g,'\n> ')}\n\n`;
+      md += ruleTable(item.rule) + '\n';
+    }
+  }
+
+  // Section 2C: Modifications
+  if (modifications.length) {
+    md += `## 2C. Rule Modifications\n\n`;
+    for (const item of modifications) {
+      md += `### ${item.rule.name}\n\n`;
+      if (item.notes) md += `> ${item.notes.replace(/\n/g,'\n> ')}\n\n`;
+      md += `**Current Settings:**\n\n`;
+      md += ruleTable(item.rule) + '\n';
+      // Diff table
+      let diffRows = '';
+      for (const f of RULE_FIELDS) {
+        const oldVal = String(item.originalRule[f] ?? '');
+        const newVal = String(item.rule[f] ?? '');
+        if (oldVal !== newVal) {
+          diffRows += `| ${f} | ${oldVal} | ${newVal} |\n`;
+        }
+      }
+      if (diffRows) {
+        md += `**Changes:**\n\n| Field | Original | New |\n|-------|----------|-----|\n${diffRows}\n`;
+      }
+    }
+  }
+
+  return md;
+}
+
+function downloadMarkdown() {
+  if (!cartSession || cartSession.items.length === 0) { alert('Cart is empty.'); return; }
+  const md = buildMarkdown();
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${cartSession.mntNumber}-firewall-changes.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Event Listeners for Cart UI ──
+document.getElementById('mntBtn').addEventListener('click', openMntModal);
+document.getElementById('mntBackdrop').addEventListener('click', closeMntModal);
+document.getElementById('mntCancelBtn').addEventListener('click', closeMntModal);
+document.getElementById('mntStartBtn').addEventListener('click', () => {
+  const v = document.getElementById('mntNumberInput').value.trim();
+  if (!v) { alert('Please enter an MNT number.'); return; }
+  closeMntModal();
+  startCartSession(v);
+});
+document.getElementById('mntNumberInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('mntStartBtn').click();
+});
+
+document.getElementById('cartBtn').addEventListener('click', openCartDrawer);
+document.getElementById('cartDrawerClose').addEventListener('click', closeCartDrawer);
+document.getElementById('cartBackdrop').addEventListener('click', closeCartDrawer);
+document.getElementById('endSessionBtn').addEventListener('click', () => { closeCartDrawer(); endCartSession(); });
+document.getElementById('downloadMdBtn').addEventListener('click', downloadMarkdown);
+
+document.getElementById('reviewBackdrop').addEventListener('click', closeReviewModal);
+document.getElementById('reviewCancelBtn').addEventListener('click', closeReviewModal);
+document.getElementById('reviewSubmitBtn').addEventListener('click', submitReviewModal);
+
+document.getElementById('addRuleBackdrop').addEventListener('click', closeAddRuleModal);
+document.getElementById('addRuleCancelBtn').addEventListener('click', closeAddRuleModal);
+document.getElementById('addRuleSubmitBtn').addEventListener('click', submitAddRuleModal);
+
+document.getElementById('ctxReview').addEventListener('click', () => {
+  if (_ctxRuleIdx === null) return;
+  const ci = cartItemForRuleIdx(_ctxRuleIdx);
+  if (ci) {
+    openReviewModal(_ctxRuleIdx, ci);
+  } else {
+    openReviewModal(_ctxRuleIdx);
+  }
+});
+document.getElementById('ctxDelete').addEventListener('click', () => {
+  if (_ctxRuleIdx === null) return;
+  const ci = cartItemForRuleIdx(_ctxRuleIdx);
+  if (ci && ci.type === 'removal') {
+    // Undo delete
+    removeFromCart(ci.id);
+  } else if (ci && ci.type === 'modification') {
+    // Replace modification with removal
+    removeFromCart(ci.id);
+    const r = rules[_ctxRuleIdx];
+    addToCart({ id: generateId(), type: 'removal', ruleIdx: _ctxRuleIdx, rule: {...r}, originalRule: {...r}, notes: '' });
+  } else {
+    const r = rules[_ctxRuleIdx];
+    addToCart({ id: generateId(), type: 'removal', ruleIdx: _ctxRuleIdx, rule: {...r}, originalRule: {...r}, notes: '' });
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    hideContextMenu();
+    if (document.getElementById('mntModal').style.display !== 'none') closeMntModal();
+    else if (document.getElementById('reviewModal').style.display !== 'none') closeReviewModal();
+    else if (document.getElementById('addRuleModal').style.display !== 'none') closeAddRuleModal();
+    else if (document.getElementById('cartDrawer').classList.contains('open')) closeCartDrawer();
+  }
+});
 </script>
 </body>
 </html>
