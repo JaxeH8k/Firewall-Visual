@@ -772,6 +772,12 @@
   }
   .add-rule-btn:hover { filter: brightness(1.1); }
   .add-rule-btn.visible { display: inline-block; }
+  .export-csv-btn {
+    background: var(--accent-blue); color: #000;
+    border: none; padding: .35rem .75rem; border-radius: 8px;
+    font-size: .78rem; font-weight: 600; cursor: pointer; transition: all .2s;
+  }
+  .export-csv-btn:hover { filter: brightness(1.1); }
 
   /* Data flow lines for computer visual */
   .data-flow-container {
@@ -794,6 +800,69 @@
     90% { opacity: 1; }
     100% { opacity: 0; transform: translateY(60px); }
   }
+
+  /* ── Multi-select checkboxes ── */
+  .rules-table thead th.col-check,
+  .rules-table tbody td.col-check {
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    text-align: center;
+    padding-left: .5rem;
+    padding-right: 0;
+  }
+  .rules-table .row-check {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    cursor: pointer;
+    vertical-align: middle;
+    transition: all .15s;
+    position: relative;
+  }
+  .rules-table .row-check:checked {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+  }
+  .rules-table .row-check:checked::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 5px;
+    width: 4px; height: 8px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .rules-table tbody tr.multi-selected {
+    background: rgba(59, 130, 246, 0.08);
+  }
+  .rules-table tbody tr.multi-selected:hover {
+    background: rgba(59, 130, 246, 0.14);
+  }
+
+  /* ── Batch action bar ── */
+  .batch-action-bar {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    padding: .65rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    animation: slideUp .2s ease;
+    z-index: 10;
+  }
+  .batch-action-bar .batch-count {
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--accent-blue);
+    white-space: nowrap;
+  }
+  .batch-action-bar .batch-spacer { flex: 1; }
 </style>
 </head>
 <body>
@@ -910,7 +979,7 @@
         <div class="form-group"><label>Remote Port</label><input type="text" id="rf-remotePort"></div>
         <div class="form-group"><label>Local Scope</label><input type="text" id="rf-localScope"></div>
         <div class="form-group"><label>Remote Scope</label><input type="text" id="rf-remoteScope"></div>
-        <div class="form-group"><label>Profile</label><input type="text" id="rf-profile"></div>
+        <div class="form-group"><label>Profile</label><select id="rf-profile"><option value="All">All</option><option value="Domain">Domain</option><option value="Private">Private</option><option value="Public">Public</option><option value="Domain, Private">Domain, Private</option><option value="Domain, Public">Domain, Public</option><option value="Private, Public">Private, Public</option></select></div>
         <div class="form-group"><label>Program</label><input type="text" id="rf-program"></div>
         <div class="form-group"><label>Service</label><input type="text" id="rf-service"></div>
         <div class="form-group"><label>Interface Type</label><input type="text" id="rf-interfaceType"></div>
@@ -920,6 +989,10 @@
         <div class="form-group"><label>Group</label><input type="text" id="rf-group"></div>
         <div class="form-group"><label>Auth Computers</label><input type="text" id="rf-authComputers"></div>
         <div class="form-group"><label>Auth Users</label><input type="text" id="rf-authUsers"></div>
+      </div>
+      <div class="form-group full-width" style="margin-top:.75rem;">
+        <label>Reason for change</label>
+        <textarea id="rf-reason" rows="2" placeholder="Why is this change being made?"></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -945,7 +1018,7 @@
         <div class="form-group"><label>Remote Port</label><input type="text" id="arf-remotePort" value="Any"></div>
         <div class="form-group"><label>Local Scope</label><input type="text" id="arf-localScope"></div>
         <div class="form-group"><label>Remote Scope</label><input type="text" id="arf-remoteScope"></div>
-        <div class="form-group"><label>Profile</label><input type="text" id="arf-profile" value="All"></div>
+        <div class="form-group"><label>Profile</label><select id="arf-profile"><option value="All">All</option><option value="Domain">Domain</option><option value="Private">Private</option><option value="Public">Public</option><option value="Domain, Private">Domain, Private</option><option value="Domain, Public">Domain, Public</option><option value="Private, Public">Private, Public</option></select></div>
         <div class="form-group"><label>Program</label><input type="text" id="arf-program"></div>
         <div class="form-group"><label>Service</label><input type="text" id="arf-service"></div>
         <div class="form-group"><label>Interface Type</label><input type="text" id="arf-interfaceType"></div>
@@ -960,6 +1033,32 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" id="addRuleCancelBtn">Cancel</button>
       <button class="btn btn-success" id="addRuleSubmitBtn">Add to Cart</button>
+    </div>
+  </div>
+</div>
+
+<!-- Batch Edit Modal -->
+<div id="batchEditModal" style="display:none">
+  <div class="overlay-backdrop" id="batchEditBackdrop"></div>
+  <div class="modal-card">
+    <div class="modal-header"><span id="batchEditTitle">Batch Edit</span></div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:.75rem;">
+        <label>Field to modify</label>
+        <select id="batchField" class="filter-select" style="width:100%"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:.75rem;" id="batchValueGroup">
+        <label>New value</label>
+        <input type="text" id="batchValueInput">
+      </div>
+      <div class="form-group">
+        <label>Reason for change (required)</label>
+        <textarea id="batchReason" rows="3" placeholder="Why is this change being made?"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="batchEditCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="batchEditSubmitBtn">Apply to Cart</button>
     </div>
   </div>
 </div>
@@ -985,6 +1084,7 @@ let gpoName = '';
 let selectedRule = null;
 let cartSession = null; // { mntNumber, createdAt, items[] }
 let _ctxRuleIdx = null; // currently right-clicked rule index
+let selectedRuleIndices = new Set(); // multi-select for batch edit
 
 // ── Protocol map ──
 const PROTO_MAP = {
@@ -1032,6 +1132,7 @@ document.getElementById('reloadBtn').addEventListener('click', () => {
   rules = [];
   selectedRule = null;
   cartSession = null;
+  selectedRuleIndices.clear();
   document.getElementById('mntActiveLabel').style.display = 'none';
   document.getElementById('cartBtn').style.display = 'none';
   document.getElementById('mntBtn').style.display = '';
@@ -1263,6 +1364,7 @@ function renderOverview() {
       <div class="table-header">
         <h2>All Inbound Rules</h2>
         <button class="add-rule-btn ${cartSession ? 'visible' : ''}" id="addRuleBtn" onclick="openAddRuleModal()">+ Add Rule</button>
+        <button class="export-csv-btn" onclick="exportFilteredCsv()">Export CSV</button>
         <div class="table-filter">
           <input class="filter-input" type="text" placeholder="Search rules..." id="overviewSearch">
           <select class="filter-select" id="overviewFilterAction">
@@ -1292,6 +1394,7 @@ function renderOverview() {
         <table class="rules-table">
           <thead>
             <tr>
+              ${cartSession ? '<th class="col-check"><input type="checkbox" class="row-check" id="selectAllCheck" title="Select all"></th>' : ''}
               <th>Name</th>
               <th>Action</th>
               <th>Protocol</th>
@@ -1315,6 +1418,21 @@ function renderOverview() {
   document.getElementById('overviewFilterEnabled').addEventListener('change', renderOverviewTable);
   document.getElementById('overviewFilterProfile').addEventListener('change', renderOverviewTable);
   document.getElementById('overviewFilterSecurity').addEventListener('change', renderOverviewTable);
+
+  // Select-all checkbox
+  const selectAllEl = document.getElementById('selectAllCheck');
+  if (selectAllEl) {
+    selectAllEl.addEventListener('change', () => {
+      const tbody = document.getElementById('overviewTableBody');
+      const checkboxes = tbody.querySelectorAll('.row-check');
+      if (selectAllEl.checked) {
+        checkboxes.forEach(cb => { selectedRuleIndices.add(parseInt(cb.dataset.idx)); cb.checked = true; cb.closest('tr').classList.add('multi-selected'); });
+      } else {
+        checkboxes.forEach(cb => { selectedRuleIndices.delete(parseInt(cb.dataset.idx)); cb.checked = false; cb.closest('tr').classList.remove('multi-selected'); });
+      }
+      renderBatchBar();
+    });
+  }
 }
 
 function renderOverviewTable() {
@@ -1348,7 +1466,10 @@ function renderOverviewTable() {
     let rowClass = selectedRule === r ? 'selected' : '';
     if (ci && ci.type === 'removal') rowClass += ' in-cart-removal';
     else if (ci && ci.type === 'modification') rowClass += ' in-cart-modification';
+    if (selectedRuleIndices.has(idx)) rowClass += ' multi-selected';
+    const checkCell = cartSession ? `<td class="col-check"><input type="checkbox" class="row-check" data-idx="${idx}" ${selectedRuleIndices.has(idx) ? 'checked' : ''}></td>` : '';
     return `<tr data-idx="${idx}" class="${rowClass}">
+      ${checkCell}
       <td title="${escHtml(r.name)}">${escHtml(r.name)}</td>
       <td><span class="panel-badge ${r.action === 'Allow' ? 'badge-allow' : 'badge-block'}">${r.action}</span></td>
       <td>${protoLabel(r.protocol)}</td>
@@ -1361,6 +1482,17 @@ function renderOverviewTable() {
   }).join('');
 
   tbody.querySelectorAll('tr').forEach(tr => {
+    const checkbox = tr.querySelector('.row-check');
+    if (checkbox) {
+      checkbox.addEventListener('change', e => {
+        e.stopPropagation();
+        const idx = parseInt(checkbox.dataset.idx);
+        if (checkbox.checked) { selectedRuleIndices.add(idx); tr.classList.add('multi-selected'); }
+        else { selectedRuleIndices.delete(idx); tr.classList.remove('multi-selected'); }
+        renderBatchBar();
+      });
+      checkbox.addEventListener('click', e => e.stopPropagation());
+    }
     tr.addEventListener('click', () => {
       const idx = parseInt(tr.dataset.idx);
       selectRule(rules[idx]);
@@ -1371,6 +1503,49 @@ function renderOverviewTable() {
       showContextMenu(e, parseInt(tr.dataset.idx));
     });
   });
+
+  renderBatchBar();
+}
+
+function exportFilteredCsv() {
+  const search = (document.getElementById('overviewSearch')?.value || '').toLowerCase();
+  const actionFilter = document.getElementById('overviewFilterAction')?.value || '';
+  const enabledFilter = document.getElementById('overviewFilterEnabled')?.value || '';
+  const profileFilter = document.getElementById('overviewFilterProfile')?.value || '';
+  const securityFilter = document.getElementById('overviewFilterSecurity')?.value || '';
+
+  let filtered = rules.filter(r => {
+    if (actionFilter && r.action !== actionFilter) return false;
+    if (enabledFilter === 'true' && !r.enabled) return false;
+    if (enabledFilter === 'false' && r.enabled) return false;
+    if (profileFilter) {
+      const p = (r.profile || '').toLowerCase();
+      if (p !== 'all' && !p.includes(profileFilter.toLowerCase())) return false;
+    }
+    if (securityFilter === 'auth' && !r.security) return false;
+    if (securityFilter === 'none' && r.security) return false;
+    if (search) {
+      const haystack = `${r.name} ${r.protocol} ${protoLabel(r.protocol)} ${r.localPort} ${portShortName(r.localPort)} ${r.remoteScope} ${r.service} ${r.action} ${r.security}`.toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+
+  const csvEscape = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const headers = ['Name','Action','Protocol','Local Port','Remote Scope','Enabled','Security','Service','Profile','Description'];
+  const rows = filtered.map(r => [
+    r.name, r.action, protoLabel(r.protocol), r.localPort || 'Any',
+    r.remoteScope || 'Any', r.enabled ? 'Yes' : 'No',
+    r.security || '', r.service || '', r.profile || '', r.description || ''
+  ]);
+  const csv = [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (gpoName || 'firewall-rules') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Environment rendering ──
@@ -1708,6 +1883,133 @@ function houseSvg() {
   </svg>`;
 }
 
+// ── Batch action bar ──
+function renderBatchBar() {
+  const wrapper = document.querySelector('.rules-table-wrapper');
+  if (!wrapper) return;
+  let bar = wrapper.querySelector('.batch-action-bar');
+  if (selectedRuleIndices.size === 0 || !cartSession) {
+    if (bar) bar.remove();
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'batch-action-bar';
+    wrapper.appendChild(bar);
+  }
+  bar.innerHTML = `
+    <span class="batch-count">${selectedRuleIndices.size} rule${selectedRuleIndices.size > 1 ? 's' : ''} selected</span>
+    <span class="batch-spacer"></span>
+    <button class="btn btn-secondary" id="batchDeselectBtn">Deselect All</button>
+    <button class="btn btn-primary" id="batchEditBtn">Batch Edit</button>
+    <button class="btn btn-danger" id="batchDeleteBtn">Delete Selected</button>
+  `;
+  document.getElementById('batchDeselectBtn').addEventListener('click', () => {
+    selectedRuleIndices.clear();
+    renderOverviewTable();
+    const selectAll = document.getElementById('selectAllCheck');
+    if (selectAll) selectAll.checked = false;
+  });
+  document.getElementById('batchEditBtn').addEventListener('click', openBatchEditModal);
+  document.getElementById('batchDeleteBtn').addEventListener('click', () => {
+    if (!confirm(`Delete ${selectedRuleIndices.size} rule(s)? They will be added to cart as removals.`)) return;
+    for (const idx of selectedRuleIndices) {
+      const ci = cartItemForRuleIdx(idx);
+      if (ci && ci.type === 'removal') continue; // already marked
+      if (ci) removeFromCart(ci.id);
+      const r = rules[idx];
+      addToCart({ id: generateId(), type: 'removal', ruleIdx: idx, rule: {...r}, originalRule: {...r}, notes: '' });
+    }
+    selectedRuleIndices.clear();
+    renderOverviewTable();
+    const selectAll = document.getElementById('selectAllCheck');
+    if (selectAll) selectAll.checked = false;
+  });
+}
+
+// Profile dropdown options (shared)
+const PROFILE_OPTIONS = ['All','Domain','Private','Public','Domain, Private','Domain, Public','Private, Public'];
+
+// Map of fields that use a dropdown in batch edit
+const BATCH_FIELD_OPTIONS = {
+  action: ['Allow','Block'],
+  enabled: ['true','false'],
+  profile: PROFILE_OPTIONS,
+  edgeTraversal: ['false','true']
+};
+
+const BATCH_FIELD_LABELS = {
+  name:'Name', description:'Description', action:'Action', enabled:'Enabled',
+  protocol:'Protocol', localPort:'Local Port', remotePort:'Remote Port',
+  localScope:'Local Scope', remoteScope:'Remote Scope', profile:'Profile',
+  program:'Program', service:'Service', interfaceType:'Interface Type',
+  security:'Security', icmpSettings:'ICMP Settings', edgeTraversal:'Edge Traversal',
+  group:'Group', authComputers:'Auth Computers', authUsers:'Auth Users'
+};
+
+function openBatchEditModal() {
+  document.getElementById('batchEditTitle').textContent = `Batch Edit (${selectedRuleIndices.size} rules)`;
+  const fieldSelect = document.getElementById('batchField');
+  fieldSelect.innerHTML = RULE_FIELDS.map(f => `<option value="${f}">${BATCH_FIELD_LABELS[f] || f}</option>`).join('');
+  updateBatchValueInput();
+  document.getElementById('batchReason').value = '';
+  document.getElementById('batchEditModal').style.display = '';
+  fieldSelect.addEventListener('change', updateBatchValueInput);
+}
+
+function updateBatchValueInput() {
+  const field = document.getElementById('batchField').value;
+  const group = document.getElementById('batchValueGroup');
+  const opts = BATCH_FIELD_OPTIONS[field];
+  if (opts) {
+    group.innerHTML = `<label>New value</label><select id="batchValueInput">${opts.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
+  } else {
+    group.innerHTML = `<label>New value</label><input type="text" id="batchValueInput">`;
+  }
+}
+
+function closeBatchEditModal() {
+  document.getElementById('batchEditModal').style.display = 'none';
+}
+
+function submitBatchEditModal() {
+  const field = document.getElementById('batchField').value;
+  const rawValue = document.getElementById('batchValueInput').value;
+  const reason = document.getElementById('batchReason').value.trim();
+  if (!reason) { alert('Please provide a reason for this change.'); return; }
+
+  let value = rawValue;
+  if (field === 'enabled') value = rawValue === 'true';
+  else if (field === 'edgeTraversal') value = rawValue === 'true';
+
+  for (const idx of selectedRuleIndices) {
+    const existingCI = cartItemForRuleIdx(idx);
+    if (existingCI && existingCI.type === 'modification') {
+      // Update existing cart item
+      existingCI.rule[field] = value;
+      existingCI.notes = reason;
+    } else if (!existingCI) {
+      const originalRule = {...rules[idx]};
+      const newRule = {...rules[idx]};
+      newRule[field] = value;
+      addToCart({
+        id: generateId(),
+        type: 'modification',
+        ruleIdx: idx,
+        rule: newRule,
+        originalRule,
+        notes: reason
+      });
+    }
+  }
+
+  selectedRuleIndices.clear();
+  closeBatchEditModal();
+  renderOverviewTable();
+  const selectAll = document.getElementById('selectAllCheck');
+  if (selectAll) selectAll.checked = false;
+}
+
 // ── Cart / Maintenance Task ──
 function escHtml(s) {
   if (!s) return '';
@@ -1738,6 +2040,7 @@ function startCartSession(mntNumber) {
 function endCartSession() {
   if (!confirm('End this maintenance session? All cart items will be lost.')) return;
   cartSession = null;
+  selectedRuleIndices.clear();
   document.getElementById('mntBtn').style.display = '';
   document.getElementById('mntActiveLabel').style.display = 'none';
   document.getElementById('cartBtn').style.display = 'none';
@@ -1809,6 +2112,24 @@ const RULE_FIELDS = ['name','description','action','enabled','protocol','localPo
 let _reviewRuleIdx = null;
 let _reviewExistingItem = null;
 
+function normalizeProfile(val) {
+  if (!val) return 'All';
+  const v = val.trim();
+  // Check exact match first
+  for (const opt of PROFILE_OPTIONS) {
+    if (opt.toLowerCase() === v.toLowerCase()) return opt;
+  }
+  // Check for combined profiles
+  const lower = v.toLowerCase();
+  const parts = [];
+  if (lower.includes('domain')) parts.push('Domain');
+  if (lower.includes('private')) parts.push('Private');
+  if (lower.includes('public')) parts.push('Public');
+  if (parts.length === 3 || lower === 'all') return 'All';
+  if (parts.length === 0) return 'All';
+  return parts.join(', ');
+}
+
 function openReviewModal(ruleIdx, existingItem) {
   _reviewRuleIdx = ruleIdx;
   _reviewExistingItem = existingItem || null;
@@ -1819,12 +2140,16 @@ function openReviewModal(ruleIdx, existingItem) {
   for (const f of RULE_FIELDS) {
     const el = document.getElementById('rf-' + f);
     if (!el) continue;
-    if (el.tagName === 'SELECT') {
+    if (f === 'profile') {
+      el.value = normalizeProfile(String(r[f]));
+    } else if (el.tagName === 'SELECT') {
       el.value = String(r[f]);
     } else {
       el.value = r[f] || '';
     }
   }
+  // Reason field
+  document.getElementById('rf-reason').value = existingItem ? (existingItem.notes || '') : '';
   document.getElementById('reviewModal').style.display = '';
 }
 function closeReviewModal() {
@@ -1842,10 +2167,12 @@ function submitReviewModal() {
     else newRule[f] = el.value;
   }
   if (!newRule.name) { alert('Rule name is required.'); return; }
+  const reason = (document.getElementById('rf-reason').value || '').trim();
 
   if (_reviewExistingItem) {
     // Update existing cart item
     _reviewExistingItem.rule = newRule;
+    _reviewExistingItem.notes = reason;
     closeReviewModal();
     renderCartDrawer();
     renderOverviewTable();
@@ -1859,7 +2186,7 @@ function submitReviewModal() {
     ruleIdx: _reviewRuleIdx,
     rule: newRule,
     originalRule,
-    notes: ''
+    notes: reason
   };
   addToCart(item);
   closeReviewModal();
@@ -2099,6 +2426,10 @@ document.getElementById('addRuleBackdrop').addEventListener('click', closeAddRul
 document.getElementById('addRuleCancelBtn').addEventListener('click', closeAddRuleModal);
 document.getElementById('addRuleSubmitBtn').addEventListener('click', submitAddRuleModal);
 
+document.getElementById('batchEditBackdrop').addEventListener('click', closeBatchEditModal);
+document.getElementById('batchEditCancelBtn').addEventListener('click', closeBatchEditModal);
+document.getElementById('batchEditSubmitBtn').addEventListener('click', submitBatchEditModal);
+
 document.getElementById('ctxReview').addEventListener('click', () => {
   if (_ctxRuleIdx === null) return;
   const ci = cartItemForRuleIdx(_ctxRuleIdx);
@@ -2130,6 +2461,7 @@ document.addEventListener('keydown', e => {
     hideContextMenu();
     if (document.getElementById('mntModal').style.display !== 'none') closeMntModal();
     else if (document.getElementById('reviewModal').style.display !== 'none') closeReviewModal();
+    else if (document.getElementById('batchEditModal').style.display !== 'none') closeBatchEditModal();
     else if (document.getElementById('addRuleModal').style.display !== 'none') closeAddRuleModal();
     else if (document.getElementById('cartDrawer').classList.contains('open')) closeCartDrawer();
   }
